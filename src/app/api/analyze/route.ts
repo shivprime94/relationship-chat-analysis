@@ -3,8 +3,6 @@ import { sanitizeText, extractParticipants } from '@/lib/sanitize';
 import { GoogleGenerativeAI, GenerativeModel, GenerateContentResult } from '@google/generative-ai';
 import JSZip from 'jszip';
 
-// Initialize Google AI with a timeout
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const MODEL_TIMEOUT = 120000; // 120 seconds
 
 // Add custom error type
@@ -107,9 +105,17 @@ export async function POST(request: NextRequest) {
       'Cache-Control': 'no-store, no-cache, must-revalidate',
     };
 
-    // Get the file from form data
+    // Get the file and API key from form data
     const formData = await request.formData();
     const file = formData.get('file');
+    const apiKey = formData.get('apiKey');
+
+    if (!apiKey || typeof apiKey !== 'string') {
+      return NextResponse.json(
+        { error: 'Please provide your Gemini API key', code: 'INVALID_API_KEY' },
+        { status: 400, headers }
+      );
+    }
 
     if (!file || !(file instanceof Blob)) {
       return NextResponse.json(
@@ -117,6 +123,9 @@ export async function POST(request: NextRequest) {
         { status: 400, headers }
       );
     }
+
+    // Initialize Gemini with user's API key
+    const genAI = new GoogleGenerativeAI(apiKey);
 
     // Check file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
@@ -163,7 +172,7 @@ export async function POST(request: NextRequest) {
     const modelConfig: ModelConfig = {
       model: 'gemini-pro',
       generationConfig: {
-        temperature: 0.7,
+        temperature: 0.5,
         topP: 0.8,
         topK: 40,
         maxOutputTokens: 8192,

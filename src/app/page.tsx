@@ -216,12 +216,18 @@ const dummyAnalysis: Analysis = {
 
 export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisStep, setAnalysisStep] = useState<AnalysisStep>(null);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
-  const [showDemo, setShowDemo] = useState(true);
+  const [showDemo, setShowDemo] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState('');
 
   const handleFileSelect = async (file: File) => {
+    if (!apiKey.trim()) {
+      setError('Please enter your Gemini API key');
+      return;
+    }
+
     setShowDemo(false);
     setIsAnalyzing(true);
     setError(null);
@@ -231,6 +237,7 @@ export default function Home() {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('apiKey', apiKey.trim());
 
       setAnalysisStep('sanitizing');
       const response = await fetch('/api/analyze', {
@@ -307,13 +314,53 @@ export default function Home() {
           <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400">
             Upload your WhatsApp chat export and get insights about your relationship
           </p>
-          <button
-            onClick={toggleDemo}
-            className="px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
-          >
-            {showDemo ? "Hide Demo" : "Show Demo Analysis"}
-          </button>
         </div>
+
+        {/* API Key Input */}
+        <div className="w-full sm:max-w-md mx-auto bg-white dark:bg-gray-800 rounded-lg shadow p-4 sm:p-6">
+          <div className="space-y-3">
+            <div className="flex flex-col space-y-1">
+              <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Gemini API Key
+              </label>
+              <input
+                type="password"
+                id="apiKey"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Enter your Gemini API key"
+                className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 rounded-md shadow-sm 
+                         placeholder-gray-400 dark:placeholder-gray-600 
+                         focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 
+                         focus:border-blue-500 dark:focus:border-blue-600
+                         bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+              <p className="flex-shrink-0">
+                Get your API key from{' '}
+                <a 
+                  href="https://aistudio.google.com/app/apikey" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
+                >
+                  Google AI Studio
+                </a>
+              </p>
+              {apiKey && (
+                <span className="text-green-600 dark:text-green-400 flex-shrink-0">✓ API Key set</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={toggleDemo}
+          className="block mx-auto px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+        >
+          {showDemo ? "Hide Demo" : "Show Demo Analysis"}
+        </button>
         
         <FileUpload onFileSelect={handleFileSelect} />
 
@@ -323,6 +370,7 @@ export default function Home() {
             <li>All processing is done securely</li>
             <li>No chat data is stored on our servers</li>
             <li>Sensitive information is automatically removed</li>
+            <li>Your API key is never stored or shared</li>
           </ul>
         </div>
 
