@@ -1,90 +1,156 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sanitizeText, extractParticipants } from '@/lib/sanitize';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, GenerativeModel, GenerateContentResult } from '@google/generative-ai';
 import JSZip from 'jszip';
 
-// Initialize Google AI
+// Initialize Google AI with a timeout
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const MODEL_TIMEOUT = 120000; // 120 seconds
 
 // Add custom error type
 interface ExtractError extends Error {
   message: string;
+  code?: string;
+}
+
+// Add type for model configuration
+interface ModelConfig {
+  model: string;
+  generationConfig: {
+    temperature: number;
+    topP: number;
+    topK: number;
+    maxOutputTokens: number;
+  };
 }
 
 async function extractChatFromZip(file: File | Blob): Promise<string> {
-  const zip = new JSZip();
-  
   try {
-    // Convert File/Blob to ArrayBuffer
+    const zip = new JSZip();
     const arrayBuffer = await file.arrayBuffer();
     const zipContent = await zip.loadAsync(arrayBuffer);
     
-    console.log('Files in ZIP:', Object.keys(zipContent.files));
-    
-    // Find any .txt file in the ZIP
     const chatFile = Object.values(zipContent.files).find(file => 
       !file.dir && file.name.toLowerCase().endsWith('.txt')
     );
 
     if (!chatFile) {
-      throw new Error('No text file found in the ZIP. Found files: ' + Object.keys(zipContent.files).join(', '));
+      throw new Error('No text file found in the ZIP');
     }
 
-    console.log('Found chat file:', chatFile.name);
-
-    // Extract the chat content
     const content = await chatFile.async('string');
+    // const whatsappFormatRegex = /\d{1,2}\/\d{1,2}\/\d{2,4},\s\d{1,2}:\d{2}\s[ap]m\s-\s/i;
     
-    // Validate WhatsApp chat format (looking for date/time patterns and message structure)
-    const whatsappFormatRegex = /\d{1,2}\/\d{1,2}\/\d{2,4},\s\d{1,2}:\d{2}\s[ap]m\s-\s/i;
-    if (!whatsappFormatRegex.test(content)) {
-      throw new Error('File does not match WhatsApp chat export format');
-    }
+    // if (!whatsappFormatRegex.test(content)) {
+    //   throw new Error('File does not match WhatsApp chat export format');
+    // }
 
     return content;
   } catch (error: unknown) {
-    console.error('Error processing ZIP:', error);
     const extractError = error as ExtractError;
-    throw new Error(extractError?.message || 'Failed to process ZIP file');
+    extractError.code = 'EXTRACT_ERROR';
+    throw extractError;
+  }
+}
+
+async function analyzeWithTimeout(model: GenerativeModel, prompt: string): Promise<GenerateContentResult> {
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      const error = new Error('Analysis timed out after 120 seconds. Please try with a smaller chat file.');
+      (error as ExtractError).code = 'TIMEOUT';
+      reject(error);
+    }, MODEL_TIMEOUT);
+  });
+
+  const analysisPromise = model.generateContent([{ text: prompt }]);
+
+  try {
+    console.log('Starting analysis...');
+    const result = await Promise.race([analysisPromise, timeoutPromise]);
+    console.log('Analysis completed successfully');
+    
+    if (!result.response) {
+      console.error('No response received from model');
+      throw new Error('No response from AI model');
+    }
+    
+    return result;
+  } catch (error: unknown) {
+    console.error('Analysis error:', error);
+    const analysisError = error as ExtractError;
+    
+    if (analysisError.code === 'TIMEOUT') {
+      throw analysisError;
+    }
+    
+    // Check for specific error types
+    if (error instanceof Error) {
+      if (error.message.includes('rate limit')) {
+        analysisError.code = 'RATE_LIMIT';
+        analysisError.message = 'Service is busy. Please try again in a few minutes.';
+      } else if (error.message.includes('quota')) {
+        analysisError.code = 'QUOTA_EXCEEDED';
+        analysisError.message = 'Analysis quota exceeded. Please try again later.';
+      }
+    }
+    
+    analysisError.code = analysisError.code || 'ANALYSIS_ERROR';
+    throw analysisError;
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // Set response headers for better error handling
+    const headers = {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+    };
+
+    // Get the file from form data
     const formData = await request.formData();
     const file = formData.get('file');
 
     if (!file || !(file instanceof Blob)) {
       return NextResponse.json(
-        { error: 'No valid file provided' },
-        { status: 400 }
+        { error: 'No valid file provided', code: 'INVALID_FILE' },
+        { status: 400, headers }
       );
     }
 
-    // Extract chat content from ZIP
+    // Check file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: 'File size exceeds 10MB limit', code: 'FILE_TOO_LARGE' },
+        { status: 400, headers }
+      );
+    }
+
+    // Extract chat content
     let text: string;
     try {
       text = await extractChatFromZip(file);
     } catch (error: unknown) {
-      console.error('Extraction error:', error);
       const extractError = error as ExtractError;
       return NextResponse.json(
-        { error: extractError?.message || 'Failed to extract chat from ZIP file' },
-        { status: 400 }
-      );
-    }
-    
-    // Extract participants
-    const participants = extractParticipants(text);
-    
-    if (participants.length === 0) {
-      return NextResponse.json(
-        { error: 'No participants found in chat' },
-        { status: 400 }
+        { 
+          error: extractError.message || 'Failed to extract chat from ZIP file',
+          code: extractError.code || 'EXTRACT_ERROR'
+        },
+        { status: 400, headers }
       );
     }
 
-    // Ensure we have at least two participants
+    // Extract and validate participants
+    const participants = extractParticipants(text);
+    if (participants.length === 0) {
+      return NextResponse.json(
+        { error: 'No participants found in chat', code: 'NO_PARTICIPANTS' },
+        { status: 400, headers }
+      );
+    }
+
+    // Ensure we have exactly two participants
     const mainParticipants = participants.slice(0, 2);
     if (mainParticipants.length === 1) {
       mainParticipants.push("Other");
@@ -94,7 +160,17 @@ export async function POST(request: NextRequest) {
     const sanitizedText = sanitizeText(text, participants);
 
     // Initialize Gemini model
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const modelConfig: ModelConfig = {
+      model: 'gemini-pro',
+      generationConfig: {
+        temperature: 0.7,
+        topP: 0.8,
+        topK: 40,
+        maxOutputTokens: 8192,
+      },
+    };
+
+    const model = genAI.getGenerativeModel(modelConfig);
 
     // Prepare the prompt
     const prompt = `As an experienced dating coach with years of professional expertise in relationship dynamics, perform a thorough analysis of this WhatsApp chat conversation. Calculate all metrics precisely and provide detailed insights in valid JSON format.
@@ -252,24 +328,21 @@ export async function POST(request: NextRequest) {
     }`;
 
     try {
-      // Generate response
-      const result = await model.generateContent([{ text: prompt }]);
+      // Generate response with timeout
+      const response = await analyzeWithTimeout(model, prompt);
+      const responseText = response.response.text();
       
-      if (!result.response) {
-        throw new Error('No response from Gemini API');
-      }
-
-      const response = result.response;
-      const text = response.text();
+      // Clean and parse the response
+      console.log('Cleaning response text...');
+      const cleanText = responseText.replace(/```json\n?|\n?```/g, '').trim();
       
       try {
-        // Clean the response text by removing markdown code blocks
-        const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
-        
-        // Parse the JSON response
+        console.log('Parsing JSON response...');
         const rawAnalysis = JSON.parse(cleanText);
+        console.log('JSON parsed successfully');
         
         // Transform and validate the response
+        console.log('Transforming analysis data...');
         const analysis = {
           messageStats: {
             totalMessages: {
@@ -377,38 +450,50 @@ export async function POST(request: NextRequest) {
         };
 
         // Add debug logging
-        console.log('Processed analysis:', JSON.stringify(analysis, null, 2));
-
+        console.log('Analysis transformation completed');
+        
         // Validate that all required fields exist and have proper types
         if (!analysis.messageStats?.totalMessages || 
             !analysis.relationshipInsights?.relationshipStatus ||
             !analysis.languageAnalysis?.sentimentOverTime?.dates ||
             !analysis.timeAnalysis?.messagesPerMonth?.dates) {
-          throw new Error('Missing required fields in analysis');
+          console.error('Missing required fields in analysis');
+          throw new Error('Incomplete analysis results. Some required fields are missing.');
         }
 
-        return NextResponse.json(analysis);
+        return NextResponse.json(analysis, { headers });
       } catch (parseError) {
-        console.error('Error parsing Gemini response:', parseError);
-        // Return the raw text for debugging
-        return NextResponse.json(
-          { error: 'Failed to parse analysis results', debug: text },
-          { status: 500 }
-        );
+        console.error('Error parsing response:', parseError);
+        console.error('Raw response:', responseText);
+        throw new Error('Failed to parse analysis results. The response was not in the expected format.');
       }
     } catch (error: unknown) {
-      console.error('Gemini API error:', error);
-      const apiError = error as ExtractError;
+      console.error('Analysis failed:', error);
+      const analysisError = error as ExtractError;
+      const statusCode = analysisError.code === 'TIMEOUT' ? 504 : 
+                        analysisError.code === 'RATE_LIMIT' ? 429 :
+                        analysisError.code === 'QUOTA_EXCEEDED' ? 429 : 500;
+      
+      const errorMessage = analysisError.code === 'RATE_LIMIT' ? 'Service is busy. Please try again in a few minutes.' :
+                          analysisError.code === 'QUOTA_EXCEEDED' ? 'Analysis quota exceeded. Please try again later.' :
+                          analysisError.message || 'Failed to analyze chat content';
+      
       return NextResponse.json(
-        { error: apiError?.message || 'Failed to analyze chat content' },
-        { status: 500 }
+        { 
+          error: errorMessage,
+          code: analysisError.code || 'ANALYSIS_ERROR'
+        },
+        { status: statusCode, headers }
       );
     }
   } catch (error: unknown) {
-    console.error('Error processing chat:', error);
+    const generalError = error as ExtractError;
     return NextResponse.json(
-      { error: 'Failed to process chat' },
-      { status: 500 }
+      { 
+        error: generalError.message || 'An unexpected error occurred',
+        code: generalError.code || 'UNKNOWN_ERROR'
+      },
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 } 

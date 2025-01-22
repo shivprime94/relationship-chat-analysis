@@ -238,14 +238,38 @@ export default function Home() {
         body: formData,
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to analyze chat');
+        let errorMessage = data.error || 'Failed to analyze chat';
+        
+        // Add specific messages for different error codes
+        switch (data.code) {
+          case 'TIMEOUT':
+            errorMessage = 'Analysis took too long. Please try with a smaller chat file or try again later.';
+            break;
+          case 'FILE_TOO_LARGE':
+            errorMessage = 'The chat file is too large. Please upload a file smaller than 10MB.';
+            break;
+          case 'INVALID_FILE':
+            errorMessage = 'Please upload a valid WhatsApp chat export ZIP file.';
+            break;
+          case 'NO_PARTICIPANTS':
+            errorMessage = 'No participants were found in the chat. Please ensure this is a valid WhatsApp chat export.';
+            break;
+          case 'EXTRACT_ERROR':
+            errorMessage = 'Could not extract chat from the ZIP file. Please ensure you uploaded the correct file.';
+            break;
+          case 'ANALYSIS_ERROR':
+            errorMessage = 'Failed to analyze the chat. Please try again or use a smaller chat file.';
+            break;
+        }
+        
+        throw new Error(errorMessage);
       }
 
       setAnalysisStep('analyzing');
-      const result = await response.json();
-      setAnalysis(result);
+      setAnalysis(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to analyze chat');
     } finally {

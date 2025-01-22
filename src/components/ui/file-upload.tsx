@@ -24,8 +24,8 @@ export function FileUpload({ onFileSelect }: FileUploadProps) {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      setError('File size should be less than 10MB');
+    if (file.size > 500 * 1024 * 1024) { // 500MB limit
+      setError('File size should be less than 500MB');
       return;
     }
 
