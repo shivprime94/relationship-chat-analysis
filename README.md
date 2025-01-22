@@ -1,36 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Relationship Chat Analysis
 
-## Getting Started
+A sophisticated web application that provides in-depth analysis of WhatsApp chat conversations, offering relationship insights and communication patterns while maintaining complete privacy.
 
-First, run the development server:
+## Features
 
+### Message Analysis
+- Total message count per participant
+- Time-based distribution analysis (morning, afternoon, evening, night)
+- Longest conversation identification with duration
+- Average response time calculations
+- Message frequency patterns
+
+### Relationship Insights
+- Communication style analysis
+- Attachment style identification
+- Relationship strength evaluation
+- Red flags detection (if any)
+- Positive relationship indicators
+- Mutual understanding assessment
+- Emotional expression patterns
+
+### Language Analysis
+- Top words used by each participant
+- Emoji usage patterns and rankings
+- Sentiment tracking over time
+- Common phrases identification
+- Emotional support language analysis
+
+### Time-based Analytics
+- Monthly message distribution
+- Daily message averages
+- Quick vs. delayed response patterns
+- Conversation initiation analysis
+- Conversation quality assessment (casual, meaningful, deep)
+
+## Privacy Features
+- 🔒 All processing is done locally
+- 🚫 No chat data is stored on servers
+- 🔐 Automatic removal of sensitive information
+- 📱 Phone numbers and personal data are sanitized
+- ⚡ Real-time analysis without data persistence
+
+## Technical Stack
+- Next.js 14 with App Router
+- TypeScript for type safety
+- Tailwind CSS for styling
+- Google's Gemini AI for analysis
+- shadcn/ui components
+- Recharts for data visualization
+
+## Setup Instructions
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd relationship-chat-analysis
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables:
+Create a `.env.local` file in the root directory:
+```
+GEMINI_API_KEY=your_api_key_here
+```
+Get your Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Run the development server:
+```bash
+npm run dev
+```
 
-## Learn More
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-To learn more about Next.js, take a look at the following resources:
+## How to Use
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Export your WhatsApp chat:
+   - Open WhatsApp conversation
+   - Click the three dots menu (⋮)
+   - Select "More" > "Export chat"
+   - Choose "Without media"
+   - Save the exported file
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. Upload the chat file:
+   - Visit the application
+   - Drop the exported .txt file or click to select
+   - Wait for the analysis to complete
 
-## Deploy on Vercel
+3. View Analysis Results:
+   - Message Statistics
+   - Relationship Dynamics
+   - Communication Patterns
+   - Language Usage
+   - Time-based Analytics
+   - Emotional Analysis
+   - Conversation Quality Metrics
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Privacy Policy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- No chat data is ever stored on our servers
+- All processing happens in your browser
+- Sensitive information is automatically removed
+- No personal data is collected or shared
+- Analysis results are shown only to you
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+For support, please open an issue in the GitHub repository or contact the maintainers.
