@@ -41,6 +41,8 @@ const DynamicConversationInitiation = dynamic(
   )}
 );
 
+type AnalysisStep = 'extracting' | 'sanitizing' | 'analyzing' | null;
+
 interface Analysis {
   messageStats: {
     totalMessages: Record<string, number>;
@@ -94,8 +96,6 @@ interface Analysis {
     };
   };
 }
-
-type AnalysisStep = 'extracting' | 'sanitizing' | 'analyzing' | null;
 
 interface SentimentData {
   dates: string[];
@@ -219,7 +219,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [showDemo, setShowDemo] = useState(false);
-  const [analysisStep, setAnalysisStep] = useState<string | null>(null);
+  const [analysisStep, setAnalysisStep] = useState<AnalysisStep>(null);
   const [apiKey, setApiKey] = useState('');
 
   const handleFileSelect = async (file: File) => {
