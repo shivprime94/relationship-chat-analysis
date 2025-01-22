@@ -124,7 +124,11 @@ export async function POST(request: NextRequest) {
     3. Language Analysis:
     - Extract top 5 most frequently used words for each person
     - Count and rank emoji usage
-    - Track sentiment changes over time (daily)
+    - Track sentiment changes over time (daily):
+      * Calculate sentiment scores between 0 and 1 for each person
+      * 0 represents most negative sentiment
+      * 0.5 represents neutral sentiment
+      * 1 represents most positive sentiment
     - Identify common phrases and expressions
     - Analyze emotional support language
 
@@ -137,10 +141,10 @@ export async function POST(request: NextRequest) {
     - Track conversation initiation
     - Evaluate conversation depth and quality
 
-    Analyze the following chat content and provide EXACT calculations for each metric:
+    Analyze the following chat content and provide EXACT calculations for each metric. Ensure all sentiment scores are normalized between 0 and 1:
     ${sanitizedText}
 
-    Return ONLY this exact JSON structure with calculated values:
+    Return ONLY this exact JSON structure with calculated values. For sentiment scores, always return values between 0 and 1:
     {
       "messageStats": {
         "totalMessages": {
@@ -203,8 +207,8 @@ export async function POST(request: NextRequest) {
         },
         "sentimentOverTime": {
           "dates": [<conversation_dates>],
-          "${mainParticipants[0]}": [<calculated_scores>],
-          "${mainParticipants[1]}": [<calculated_scores>]
+          "${mainParticipants[0]}": [<sentiment_scores_between_0_and_1>],
+          "${mainParticipants[1]}": [<sentiment_scores_between_0_and_1>]
         },
         "commonPhrases": {
           "${mainParticipants[0]}": [<identified_phrases>],
