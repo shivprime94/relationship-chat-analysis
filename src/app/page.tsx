@@ -119,13 +119,13 @@ function SentimentOverTime({ data, participants }: { data: SentimentData, partic
             type="monotone" 
             dataKey={participants[0]} 
             stroke="#8884d8" 
-            name={`${participants[0]}'s Sentiment`}
+            name={`${participants[0]}&apos;s Sentiment`}
           />
           <Line 
             type="monotone" 
             dataKey={participants[1]} 
             stroke="#82ca9d" 
-            name={`${participants[1]}'s Sentiment`}
+            name={`${participants[1]}&apos;s Sentiment`}
           />
         </LineChart>
       </div>
@@ -241,7 +241,7 @@ export default function Home() {
     <main className="min-h-screen p-8 bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Chat Analysis</h1>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Relationship Analysis</h1>
           <p className="text-lg text-gray-600 dark:text-gray-400">
             Upload your WhatsApp chat export and get insights about your relationship
           </p>
@@ -381,7 +381,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(analysis.languageAnalysis.topWords).map(([person, words]) => (
                 <div key={person} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                  <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{person}'s Communication</h2>
+                  <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{person}&apos;s Communication</h2>
                   <div className="space-y-4">
                     <div>
                       <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">Top Words</h3>
@@ -405,7 +405,7 @@ export default function Home() {
                       <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">Common Phrases</h3>
                       <ul className="space-y-2">
                         {analysis.languageAnalysis.commonPhrases[person].map((phrase, index) => (
-                          <li key={index} className="text-gray-700 dark:text-gray-300">"{phrase}"</li>
+                          <li key={index} className="text-gray-700 dark:text-gray-300">&ldquo;{phrase}&rdquo;</li>
                         ))}
                       </ul>
                     </div>
@@ -418,7 +418,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(analysis.relationshipInsights.communicationStyle).map(([person, style]) => (
                 <div key={person} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                  <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{person}'s Style</h2>
+                  <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{person}&apos;s Style</h2>
                   <div className="space-y-4">
                     <div>
                       <h3 className="font-semibold text-gray-800 dark:text-gray-200">Communication Style</h3>

@@ -6,6 +6,11 @@ import JSZip from 'jszip';
 // Initialize Google AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
+// Add custom error type
+interface ExtractError extends Error {
+  message: string;
+}
+
 async function extractChatFromZip(file: File | Blob): Promise<string> {
   const zip = new JSZip();
   
@@ -37,9 +42,10 @@ async function extractChatFromZip(file: File | Blob): Promise<string> {
     }
 
     return content;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error processing ZIP:', error);
-    throw new Error(error?.message || 'Failed to process ZIP file');
+    const extractError = error as ExtractError;
+    throw new Error(extractError?.message || 'Failed to process ZIP file');
   }
 }
 
@@ -59,10 +65,11 @@ export async function POST(request: NextRequest) {
     let text: string;
     try {
       text = await extractChatFromZip(file);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Extraction error:', error);
+      const extractError = error as ExtractError;
       return NextResponse.json(
-        { error: error?.message || 'Failed to extract chat from ZIP file' },
+        { error: extractError?.message || 'Failed to extract chat from ZIP file' },
         { status: 400 }
       );
     }
@@ -385,14 +392,15 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Gemini API error:', error);
+      const apiError = error as ExtractError;
       return NextResponse.json(
-        { error: error?.message || 'Failed to analyze chat content' },
+        { error: apiError?.message || 'Failed to analyze chat content' },
         { status: 500 }
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error processing chat:', error);
     return NextResponse.json(
       { error: 'Failed to process chat' },

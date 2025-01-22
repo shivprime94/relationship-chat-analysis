@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Relationship Chat Analysis",
+  title: "Relationship Analysis",
   description: "Analyze your WhatsApp chat history with privacy",
 };
 
